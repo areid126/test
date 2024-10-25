@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require("bcrypt");
-const { createUser, getUser, updateUser, verifyUser, deleteUser, updateSavedSets } = require('../models/userDatabase');
-const { getSet } = require('../models/setDatabase');
+const { createUser, getUser, updateUser, verifyUser, deleteUser, updateSavedSets } = require('../newModels/userDatabase');
+const { getSet } = require('../newModels/setDatabase');
 const router = express.Router();
 
 

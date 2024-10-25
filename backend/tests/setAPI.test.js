@@ -1,13 +1,31 @@
+// require('leaked-handles').set({
+//     fullStack: true, // use full stack traces
+//     timeout: 30000, // run every 30 seconds instead of 5.
+//     debugSockets: true // pretty print tcp thrown exceptions.
+// });
+
 // Set up supertest
 const request = require("supertest");
 const app = require("../app");
-const { deleteAllUsers, closeUserConnection } = require("../models/userDatabase");
-const { deleteAllSets, createSet, getSet, closeSetConnection } = require("../models/setDatabase");
-const { closeCardConnection, deleteAllCards } = require("../models/cardDatabase");
-const { closeFileConnection } = require("../models/fileDatabase");
+const { deleteAllUsers, closeUserConnection } = require("../newModels/userDatabase");
+const { deleteAllSets, createSet, getSet, closeSetConnection } = require("../newModels/setDatabase");
+const { closeCardConnection, deleteAllCards } = require("../newModels/cardDatabase");
+const { closeFileConnection } = require("../newModels/fileDatabase");
+const { closeMongoose } = require('../utils/mongoose');
+
+// require("leaked-handles");
 // const api = supertest(app);
 
-describe.skip("Testing the backend sets API", () => {
+// Close the database connection after running all the code
+afterAll(async () => {
+    // await closeUserConnection();
+    // await closeCardConnection();
+    // await closeFileConnection();
+    // await closeSetConnection();
+    await closeMongoose();
+});
+
+describe("Testing the backend sets API", () => {
 
     // Run all tests in a test database
     beforeAll(async () => {
@@ -27,10 +45,10 @@ describe.skip("Testing the backend sets API", () => {
 
     // Close the database connection after running all the code
     afterAll(async () => {
-        await closeCardConnection();
-        await closeSetConnection();
-        await closeUserConnection();
-        await closeFileConnection();
+        // await closeCardConnection();
+        // await closeSetConnection();
+        // await closeUserConnection();
+        // await closeFileConnection();
         // await supertest.close();
         // await request(app).close();
         // await app.close();

@@ -1,7 +1,7 @@
 const express = require('express');
-const { verifyUser } = require('../models/userDatabase');
+const { verifyUser } = require('../newModels/userDatabase');
 const { upload } = require('../utils/fileUpload');
-const { setup, getFileSet, getFile } = require('../models/fileDatabase');
+const { setup, getFileSet, getFile } = require('../newModels/fileDatabase');
 const ObjectId = require("mongoose").Types.ObjectId;
 const router = express.Router();
 

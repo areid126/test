@@ -1,8 +1,27 @@
-const { closeCardConnection } = require("../models/cardDatabase");
-const { closeFileConnection } = require("../models/fileDatabase");
-const { deleteAllUsers, createUser, getUser, getUsers, deleteUser, updateUser, verifyUser, closeUserConnection } = require("../models/userDatabase");
+// require('leaked-handles').set({
+//     fullStack: true, // use full stack traces
+//     timeout: 30000, // run every 30 seconds instead of 5.
+//     debugSockets: true // pretty print tcp thrown exceptions.
+// });
 
-describe.skip("Testing the user database model", () => {
+const { closeCardConnection } = require("../newModels/cardDatabase");
+const { closeFileConnection } = require("../newModels/fileDatabase");
+const { closeSetConnection } = require("../newModels/setDatabase");
+const { closeMongoose } = require('../utils/mongoose');
+const { deleteAllUsers, createUser, getUser, getUsers, deleteUser, updateUser, verifyUser, closeUserConnection } = require("../newModels/userDatabase");
+// require("leaked-handles");
+
+
+// Close the database connection after running all the code
+afterAll(async () => {
+    // await closeUserConnection();
+    // await closeCardConnection();
+    // await closeFileConnection();
+    // await closeSetConnection();
+    await closeMongoose();
+});
+
+describe("Testing the user database model", () => {
 
     // Run all tests in a test database
     beforeAll(async () => {
@@ -15,15 +34,6 @@ describe.skip("Testing the user database model", () => {
         // Delete the content of the database after each test
         await deleteAllUsers();
     });
-
-    // Close the database connection after running all the code
-    afterAll(async () => {
-        await closeUserConnection();
-        await closeCardConnection();
-        await closeFileConnection();
-        await closeUserConnection();
-    });
-
 
     // Test creating a user
     describe("Testing creating a user", () => {

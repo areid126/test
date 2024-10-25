@@ -5,7 +5,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node ./bin/www",
     "dev": "cross-env NODE_ENV=dev nodemon ./bin/www",
-    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --verbose --coverage --runInBand --forceExit"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --verbose --coverage --runInBand"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "leaked-handles": "^5.2.0",
     "supertest": "^7.0.0"
   }
 }

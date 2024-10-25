@@ -1,9 +1,26 @@
-const { deleteAllCards, createCard, createCards, getCards, deleteCards, getCard, deleteCard, updateCard, closeCardConnection } = require("../models/cardDatabase");
-const { closeFileConnection } = require("../models/fileDatabase");
-const { closeSetConnection } = require("../models/setDatabase");
-const { closeUserConnection } = require("../models/userDatabase");
+// require('leaked-handles').set({
+//     fullStack: true, // use full stack traces
+//     timeout: 30000, // run every 30 seconds instead of 5.
+//     debugSockets: true // pretty print tcp thrown exceptions.
+// });
 
-describe.skip("Testing the card database model", () => {
+const { deleteAllCards, createCard, createCards, getCards, deleteCards, getCard, deleteCard, updateCard, closeCardConnection } = require("../newModels/cardDatabase");
+const { closeMongoose } = require('../utils/mongoose');
+// const { closeFileConnection } = require("../newModels/fileDatabase");
+// const { closeSetConnection } = require("../newModels/setDatabase");
+// const { closeUserConnection } = require("../newModels/userDatabase");
+// require("leaked-handles");
+
+// Close the database connection after running all the code
+afterAll(async () => {
+    // await closeUserConnection();
+    // await closeCardConnection();
+    // await closeFileConnection();
+    // await closeSetConnection();
+    await closeMongoose();
+});
+
+describe("Testing the card database model", () => {
 
     // Delete the content of the database after running tests
     beforeAll(async () => {
@@ -17,10 +34,10 @@ describe.skip("Testing the card database model", () => {
 
     // Close the database connection after running all the code
     afterAll(async () => {
-        await closeCardConnection();
-        await closeUserConnection();
-        await closeFileConnection();
-        await closeSetConnection();
+        // await closeCardConnection();
+        // await closeUserConnection();
+        // await closeFileConnection();
+        // await closeSetConnection();
     });
 
     const INVALID_CARDS = [

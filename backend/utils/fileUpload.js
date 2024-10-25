@@ -1,15 +1,14 @@
 // Imports to handle file uploads. Code based on individual project (Abbey)
 const multer = require('multer');
 const { GridFsStorage } = require("multer-gridfs-storage");
-const { verifyUser } = require("../models/userDatabase");
+const { verifyUser } = require("../newModels/userDatabase");
+const { openMongoose } = require('./mongoose');
 
 // Create an instance of GridFS Storage
 const storage = new GridFsStorage({
-    url: process.env.MONGODB_URL,
+    // url: process.env.MONGODB_URL,
+    db: openMongoose().connection,
     file: (req, file) => {
-        // Get the file extension
-        const parts = file.originalname.split(".");
-        console.log(parts);
         return {
             // Define how file names are formatted
             filename: `${file.originalname}`,

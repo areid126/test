@@ -1,9 +1,27 @@
-const { closeCardConnection } = require("../models/cardDatabase");
-const { closeFileConnection } = require("../models/fileDatabase");
-const { deleteAllSets, createSet, getSet, getSets, deleteSet, deleteSets, updateSet, changeCreator, closeSetConnection } = require("../models/setDatabase");
-const { closeUserConnection } = require("../models/userDatabase");
+// require('leaked-handles').set({
+//     fullStack: true, // use full stack traces
+//     timeout: 30000, // run every 30 seconds instead of 5.
+//     debugSockets: true // pretty print tcp thrown exceptions.
+// });
 
-describe.skip("Testing the set database model", () => {
+const { closeCardConnection } = require("../newModels/cardDatabase");
+const { closeFileConnection } = require("../newModels/fileDatabase");
+const { deleteAllSets, createSet, getSet, getSets, deleteSet, deleteSets, updateSet, changeCreator, closeSetConnection } = require("../newModels/setDatabase");
+const { closeUserConnection } = require("../newModels/userDatabase");
+const { closeMongoose } = require('../utils/mongoose');
+
+// require("leaked-handles");
+
+// Close the database connection after running all the code
+afterAll(async () => {
+    // await closeUserConnection();
+    // await closeCardConnection();
+    // await closeFileConnection();
+    // await closeSetConnection();
+    await closeMongoose();
+});
+
+describe("Testing the set database model", () => {
 
     // Run all tests in a test database
 
@@ -19,10 +37,10 @@ describe.skip("Testing the set database model", () => {
 
     // Close the database connection after running all the code
     afterAll(async () => {
-        await closeSetConnection();
-        await closeCardConnection();
-        await closeFileConnection();
-        await closeUserConnection();
+        // await closeSetConnection();
+        // await closeCardConnection();
+        // await closeFileConnection();
+        // await closeUserConnection();
     });
 
     // Test creating sets

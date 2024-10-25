@@ -1,6 +1,6 @@
 const express = require('express');
-const { verifyUser } = require('../models/userDatabase');
-const { getSet, createSet, deleteSet, updateSet, getSets } = require('../models/setDatabase');
+const { verifyUser } = require('../newModels/userDatabase');
+const { getSet, createSet, deleteSet, updateSet, getSets } = require('../newModels/setDatabase');
 const router = express.Router();
 
 // Get end point that gets all public sets (also has query parameters for getting a specific users sets + getting private sets)
