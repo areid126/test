@@ -1,0 +1,39 @@
+# POST http://localhost:3000/user/register HTTP/1.1
+# content-type: application/json
+
+# {
+#     "username": "2",
+#     "password": "1"
+# }
+
+# POST http://localhost:3000/api/set HTTP/1.1
+# Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IjIiLCJpYXQiOjE3MjgxMzIyODV9.UctsxOEno-F6FFPIqwevqUYpsAUUNYbJOUlJqGC_JhU
+# content-type: application/json
+
+# {
+#     "title": "test set",
+#     "description": "testing creating sets",
+#     "public": true,
+#     "cards" : [
+#         {"term" : "term1", "definition": "def1"},
+#         {"term" : "term2", "definition": "def2"},
+#         {"term" : "term3", "definition": "def3"},
+#         {"term" : "term4", "definition": "def4"},
+#         {"term" : "term5", "definition": "def5"},
+#         {"term" : "term6", "definition": "def6"},
+#         {"term" : "term7", "definition": "def7"}
+#     ]
+# }
+
+
+# PUT http://localhost:3000/user/2 HTTP/1.1
+# Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IjIiLCJpYXQiOjE3MjgxMzIyODV9.UctsxOEno-F6FFPIqwevqUYpsAUUNYbJOUlJqGC_JhU
+# content-type: application/json
+
+# {
+#     "username": "123",
+#     "password": "12"
+# }
+
+GET http://localhost:3000/api/set?user=123 HTTP/1.1
+# Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IjEyMyIsImlhdCI6MTcyODEzMjM2OH0.pJK_7LaFXs8JN2r_iGf6pTx-CDSeX6IhTibB7rsiJ5I
