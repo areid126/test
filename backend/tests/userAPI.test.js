@@ -1,8 +1,10 @@
 // Set up supertest
-const supertest = require("supertest");
+const request = require("supertest");
 const app = require("../app");
 const { deleteAllUsers, createUser, getUser, closeUserConnection } = require("../models/userDatabase");
-const api = supertest(app);
+const { closeCardConnection } = require("../models/cardDatabase");
+const { closeFileConnection } = require("../models/fileDatabase");
+const { closeSetConnection } = require("../models/setDatabase");
 
 describe.skip("Testing the backend user API", () => {
 
@@ -21,6 +23,12 @@ describe.skip("Testing the backend user API", () => {
     // Close the database connection after running all the code
     afterAll(async () => {
         await closeUserConnection();
+        await closeCardConnection();
+        await closeFileConnection();
+        await closeSetConnection();
+        // await supertest.close();
+        // await request(app).close();
+        // await app.close();
     });
 
     const INVALID_BODY = [
@@ -37,7 +45,7 @@ describe.skip("Testing the backend user API", () => {
         test("Register a valid account", async () => {
 
             // Try to register the user
-            const res = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
 
             expect(res.body).toBeDefined();
             expect(res.body.username).toBe("name");
@@ -50,7 +58,7 @@ describe.skip("Testing the backend user API", () => {
             expect(user).toBeDefined();
 
             // Try to register the new user
-            const res = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(409);
+            const res = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(409);
 
             expect(res.body).toEqual({});
         });
@@ -58,7 +66,7 @@ describe.skip("Testing the backend user API", () => {
         // Test registering with an invalid body
         test.each(INVALID_BODY)("Test registering with an invalid body", async (body) => {
             
-            const res = await api.post("/api/user/register").send(body).expect(400);
+            const res = await request(app).post("/api/user/register").send(body).expect(400);
 
             // Expect the response body to be empty
             expect(res.body).toEqual({});
@@ -75,11 +83,11 @@ describe.skip("Testing the backend user API", () => {
 
         // Test logging in with a valid body
         test("Login with valid user credentials", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Try to login as the user
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
 
             expect(res.body).toBeDefined();
             expect(res.body.username).toBe(user.body.username);
@@ -89,7 +97,7 @@ describe.skip("Testing the backend user API", () => {
         // Test logging in with a invalid body
         test.each(INVALID_BODY)("Log in with invalid credentials", async (body) => {
 
-            const res = await api.post("/api/user/login").send(body).expect(400);
+            const res = await request(app).post("/api/user/login").send(body).expect(400);
 
             // Expect the response body to be empty
             expect(res.body).toEqual({});
@@ -98,10 +106,10 @@ describe.skip("Testing the backend user API", () => {
         // Test logging in with an invalid login
         test.each(INVALID_LOGIN)("Log in with an invalid login", async (body) => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            const res = await api.post("/api/user/login").send(body).expect(401);
+            const res = await request(app).post("/api/user/login").send(body).expect(401);
 
             // Expect the response body to be empty
             expect(res.body).toEqual({});
@@ -114,7 +122,7 @@ describe.skip("Testing the backend user API", () => {
 
         // Test that the endpoint returns 201
         test("Logout endpoint returns 201", async () => {
-            const res = await api.get("/api/user/logout").expect(201);
+            const res = await request(app).get("/api/user/logout").expect(201);
             // Expect the response body to be empty
             expect(res.body).toEqual({});
         })
@@ -126,11 +134,11 @@ describe.skip("Testing the backend user API", () => {
         // Test updating a user when authorised
         test("Update a user when authorised to update the user", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Update the user's details
-            const res = await api.put("/api/user/name")
+            const res = await request(app).put("/api/user/name")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
@@ -147,7 +155,7 @@ describe.skip("Testing the backend user API", () => {
             const user = await createUser({username: "name", password: "password"});
             expect(user).toBeDefined();
 
-            const res = await api.put("/api/user/name").send({username: "newName", password: "newPassword"}).expect(401);
+            const res = await request(app).put("/api/user/name").send({username: "newName", password: "newPassword"}).expect(401);
 
 
             // Expect the response body to be empty
@@ -159,14 +167,14 @@ describe.skip("Testing the backend user API", () => {
         // Test updating user when logged in as someone else
         test("Update a user when logged in as another user", async () => {
             // Create a user do to the update
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
 
             // Create another user to update
             const user2 = await createUser({username: "name2", password: "password"});
 
-            const res = await api.put("/api/user/name2")
+            const res = await request(app).put("/api/user/name2")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
@@ -181,15 +189,15 @@ describe.skip("Testing the backend user API", () => {
         // Test updating a user with an invalid update
         test.each(INVALID_BODY)("Update a user with an invalid body", async (body) => {
             // Create a user do to the update
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            await api.put("/api/user/name")
+            await request(app).put("/api/user/name")
                 .send(body)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the user was not updated
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res.body).toEqual(user.body);
         });
 
@@ -199,15 +207,15 @@ describe.skip("Testing the backend user API", () => {
             await createUser({username: "newName", password: "password"});
 
             // Create a user do to the update
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            await api.put("/api/user/name")
+            await request(app).put("/api/user/name")
                 .send({username: "newName", password: "thispassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(409);
 
             // Check the user was not updated
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res.body).toEqual(user.body);
         });
 
@@ -215,17 +223,17 @@ describe.skip("Testing the backend user API", () => {
         // Test updating a user that does not exist
         test("Update a user that does not exist", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Update the user's details
-            const res = await api.put("/api/user/name2")
+            const res = await request(app).put("/api/user/name2")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
             expect(res.body).toEqual({});
             // Check the user making the request was not updated
-            const res2 = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res2 = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res2.body).toEqual(user.body);
         });
 
@@ -236,10 +244,10 @@ describe.skip("Testing the backend user API", () => {
 
         // Test verifying with a token that exists
         test("Verify a token that exists", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            const res = await api.get("/api/user/verify").set("Authorization", "bearer " + user.body.token).expect(200);
+            const res = await request(app).get("/api/user/verify").set("Authorization", "bearer " + user.body.token).expect(200);
 
             expect(res.body.username).toBe(user.body.username);
             expect(res.body.token).toBe(user.body.token);
@@ -247,14 +255,14 @@ describe.skip("Testing the backend user API", () => {
 
         // Test verifyting with a token that does not exist
         test("Verify a token that does not exist", async () => {
-            const res = await api.get("/api/user/verify").set("Authorization", "bearer madeuptoken").expect(401);
+            const res = await request(app).get("/api/user/verify").set("Authorization", "bearer madeuptoken").expect(401);
 
             expect(res.body).toEqual({});
         });
 
         // Test verifying without a token
         test("Verify a user without a token", async () => {
-            const res = await api.get("/api/user/verify").expect(401);
+            const res = await request(app).get("/api/user/verify").expect(401);
 
             expect(res.body).toEqual({});
         });
@@ -266,11 +274,11 @@ describe.skip("Testing the backend user API", () => {
         // Test deleting a user when authorised
         test("Delete a user when authorised to delete the user", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Delete the user
-            await api.delete("/api/user/name").set("Authorization", "bearer " + user.body.token).expect(201);
+            await request(app).delete("/api/user/name").set("Authorization", "bearer " + user.body.token).expect(201);
 
             // Check the delete went through
             const res = await getUser("name");
@@ -284,7 +292,7 @@ describe.skip("Testing the backend user API", () => {
             const user = await createUser({username: "name", password: "password"});
             expect(user).toBeDefined();
 
-            await api.delete("/api/user/name").expect(401);
+            await request(app).delete("/api/user/name").expect(401);
 
             // Expect the user to not be deleted
             const newUser = await getUser("name");
@@ -294,14 +302,14 @@ describe.skip("Testing the backend user API", () => {
         // Test deleting a user when logged in as someone else
         test("Delete a user when logged in as another user", async () => {
             // Create a user do to the delete
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
 
             // Create another user to delete
             const user2 = await createUser({username: "name2", password: "password"});
 
-            await api.delete("/api/user/name2")
+            await request(app).delete("/api/user/name2")
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
 
@@ -315,11 +323,11 @@ describe.skip("Testing the backend user API", () => {
         // Test deleting a user that does not exist
         test("Delete a user that does not exist", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Delete the user. Should return 403 as the authenticated user is not the user being deleted
-            await api.delete("/api/user/name2").set("Authorization", "bearer " + user.body.token).expect(403);
+            await request(app).delete("/api/user/name2").set("Authorization", "bearer " + user.body.token).expect(403);
 
             // Check the user making the request was not deleted
             const res = await getUser("name");
@@ -334,11 +342,11 @@ describe.skip("Testing the backend user API", () => {
         // Test patching a user when authorised
         test("Patch a user when authorised to update the user", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Update the user's details
-            const res = await api.patch("/api/user/name")
+            const res = await request(app).patch("/api/user/name")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
@@ -357,7 +365,7 @@ describe.skip("Testing the backend user API", () => {
             expect(user).toBeDefined();
 
             // Update the user's details
-            const res = await api.patch("/api/user/name")
+            const res = await request(app).patch("/api/user/name")
                 .send({username: "newName"})
                 .set("Authorization", "bearer " + user.token).expect(200);
 
@@ -380,7 +388,7 @@ describe.skip("Testing the backend user API", () => {
             expect(user).toBeDefined();
 
             // Update the user's details
-            const res = await api.patch("/api/user/name")
+            const res = await request(app).patch("/api/user/name")
                 .send({password: "newPassword"})
                 .set("Authorization", "bearer " + user.token).expect(200);
 
@@ -397,7 +405,7 @@ describe.skip("Testing the backend user API", () => {
             const user = await createUser({username: "name", password: "password"});
             expect(user).toBeDefined();
 
-            const res = await api.patch("/api/user/name").send({username: "newName", password: "newPassword"}).expect(401);
+            const res = await request(app).patch("/api/user/name").send({username: "newName", password: "newPassword"}).expect(401);
 
             // Expect the response body to be empty
             expect(res.body).toEqual({});
@@ -408,14 +416,14 @@ describe.skip("Testing the backend user API", () => {
         // Test patching a user when logged in as someone else
         test("Patch a user when logged in as another user", async () => {
             // Create a user do to the patch
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
 
             // Create another user to patch
             const user2 = await createUser({username: "name2", password: "password"});
 
-            const res = await api.patch("/api/user/name2")
+            const res = await request(app).patch("/api/user/name2")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
@@ -430,28 +438,28 @@ describe.skip("Testing the backend user API", () => {
         // Test patching a user with an empty body
         test("Patch a user with an empty body", async () => {
             // Create a user do to the update
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            await api.patch("/api/user/name")
+            await request(app).patch("/api/user/name")
                 .send({})
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the user was not updated
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res.body).toEqual(user.body);
         });
 
         // Test patching a user with an undefined body
         test("Patch a user with an undefined body", async () => {
             // Create a user do to the update
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            await api.patch("/api/user/name").set("Authorization", "bearer " + user.body.token).expect(400);
+            await request(app).patch("/api/user/name").set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the user was not updated
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res.body).toEqual(user.body);
         });
 
@@ -461,15 +469,15 @@ describe.skip("Testing the backend user API", () => {
             await createUser({username: "newName", password: "password"});
 
             // Create a user do to the patch
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
-            await api.patch("/api/user/name")
+            await request(app).patch("/api/user/name")
                 .send({username: "newName", password: "thispassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(409);
 
             // Check the user was not updated
-            const res = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res.body).toEqual(user.body);
         });
 
@@ -477,17 +485,17 @@ describe.skip("Testing the backend user API", () => {
         // Test patching a user that does not exist
         test("Patch a user that does not exist", async () => {
             // Create a user
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             expect(user.body).toBeDefined();
 
             // Patch the user's details
-            const res = await api.patch("/api/user/name2")
+            const res = await request(app).patch("/api/user/name2")
                 .send({username: "newName", password: "newPassword"})
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
             expect(res.body).toEqual({});
             // Check the user making the request was not updated
-            const res2 = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const res2 = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
             expect(res2.body).toEqual(user.body);
         });
     });

@@ -39,8 +39,8 @@ router.get("/:id", async (req, res) => {
 // Post end point for creating sets
 router.post("/", async (req, res) => {
 
-    console.log("does it not even get here??");
-    console.log(req.body);
+    // console.log("does it not even get here??");
+    // console.log(req.body);
     
     // Get the user
     const user = await verifyUser(req.token);
@@ -67,7 +67,7 @@ router.delete("/:id", async (req, res) => {
     // If the user making the request is the user that created the set
     if(user && set && user.username === set.user) {
         await deleteSet(set.id);
-        console.log("deleted set");
+        // console.log("deleted set");
         res.status(204).send();
     } 
     

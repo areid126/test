@@ -1,5 +1,7 @@
 const { closeCardConnection } = require("../models/cardDatabase");
+const { closeFileConnection } = require("../models/fileDatabase");
 const { deleteAllSets, createSet, getSet, getSets, deleteSet, deleteSets, updateSet, changeCreator, closeSetConnection } = require("../models/setDatabase");
+const { closeUserConnection } = require("../models/userDatabase");
 
 describe.skip("Testing the set database model", () => {
 
@@ -19,6 +21,8 @@ describe.skip("Testing the set database model", () => {
     afterAll(async () => {
         await closeSetConnection();
         await closeCardConnection();
+        await closeFileConnection();
+        await closeUserConnection();
     });
 
     // Test creating sets

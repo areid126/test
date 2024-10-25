@@ -1,4 +1,7 @@
 const { deleteAllCards, createCard, createCards, getCards, deleteCards, getCard, deleteCard, updateCard, closeCardConnection } = require("../models/cardDatabase");
+const { closeFileConnection } = require("../models/fileDatabase");
+const { closeSetConnection } = require("../models/setDatabase");
+const { closeUserConnection } = require("../models/userDatabase");
 
 describe.skip("Testing the card database model", () => {
 
@@ -15,6 +18,9 @@ describe.skip("Testing the card database model", () => {
     // Close the database connection after running all the code
     afterAll(async () => {
         await closeCardConnection();
+        await closeUserConnection();
+        await closeFileConnection();
+        await closeSetConnection();
     });
 
     const INVALID_CARDS = [

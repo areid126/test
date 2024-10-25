@@ -61,10 +61,16 @@ async function getFileSet(id) {
     else return undefined;
 }
 
+// Function to close the connection
+async function closeFileConnection(gfs) {
+    if(config.MODE === "test") await mongoose.disconnect();
+}
+
 // Export functions for use in other files
 module.exports = {
     getFile,
     setup,
     deleteFile,
-    getFileSet
+    getFileSet,
+    closeFileConnection
 }

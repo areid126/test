@@ -1,3 +1,5 @@
+const { closeCardConnection } = require("../models/cardDatabase");
+const { closeFileConnection } = require("../models/fileDatabase");
 const { deleteAllUsers, createUser, getUser, getUsers, deleteUser, updateUser, verifyUser, closeUserConnection } = require("../models/userDatabase");
 
 describe.skip("Testing the user database model", () => {
@@ -16,6 +18,9 @@ describe.skip("Testing the user database model", () => {
 
     // Close the database connection after running all the code
     afterAll(async () => {
+        await closeUserConnection();
+        await closeCardConnection();
+        await closeFileConnection();
         await closeUserConnection();
     });
 

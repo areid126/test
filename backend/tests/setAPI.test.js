@@ -1,10 +1,11 @@
 // Set up supertest
-const supertest = require("supertest");
+const request = require("supertest");
 const app = require("../app");
 const { deleteAllUsers, closeUserConnection } = require("../models/userDatabase");
 const { deleteAllSets, createSet, getSet, closeSetConnection } = require("../models/setDatabase");
 const { closeCardConnection, deleteAllCards } = require("../models/cardDatabase");
-const api = supertest(app);
+const { closeFileConnection } = require("../models/fileDatabase");
+// const api = supertest(app);
 
 describe.skip("Testing the backend sets API", () => {
 
@@ -29,6 +30,10 @@ describe.skip("Testing the backend sets API", () => {
         await closeCardConnection();
         await closeSetConnection();
         await closeUserConnection();
+        await closeFileConnection();
+        // await supertest.close();
+        // await request(app).close();
+        // await app.close();
     });
 
 
@@ -48,13 +53,13 @@ describe.skip("Testing the backend sets API", () => {
             for(let i in sets) await createSet(sets[i].set, sets[i].user);
 
             // Create both users
-            await api.post("/api/user/register").send({username: "name", password: "password"});
-            await api.post("/api/user/register").send({username: "name2", password: "password"});
+            await request(app).post("/api/user/register").send({username: "name", password: "password"});
+            await request(app).post("/api/user/register").send({username: "name2", password: "password"});
         });
 
         // Get all the public sets
         test("Get all the public sets when not logged in", async () => {
-            const res = await api.get("/api/set").expect(200);
+            const res = await request(app).get("/api/set").expect(200);
 
             // Check the two public sets are returned
             expect(res.body.length).toBe(2);
@@ -64,7 +69,7 @@ describe.skip("Testing the backend sets API", () => {
 
         // Get all the public sets of a specific user
         test("Get all the sets by a specific user when not logged in", async () => {
-            const res = await api.get("/api/set?user=name").expect(200);
+            const res = await request(app).get("/api/set?user=name").expect(200);
 
             // Check the one public set is returned
             expect(res.body.length).toBe(1);
@@ -75,10 +80,10 @@ describe.skip("Testing the backend sets API", () => {
         // Get all the cards of a user (public and private)
         test("Get all the sets of a specific user when logged in as that user", async () => {
             // Login
-            const user = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
 
             // Get all the public sets as that user
-            const res = await api.get("/api/set?user=name")
+            const res = await request(app).get("/api/set?user=name")
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the two sets by the user are returned
@@ -90,10 +95,10 @@ describe.skip("Testing the backend sets API", () => {
         // Get all the cards of a user (public and private)
         test("Get all the sets of a specific user when logged in as another user", async () => {
             // Login
-            const user = await api.post("/api/user/login").send({username: "name2", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/login").send({username: "name2", password: "password"}).expect(200);
 
             // Get all the public sets as that user
-            const res = await api.get("/api/set?user=name")
+            const res = await request(app).get("/api/set?user=name")
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the two sets by the user are returned
@@ -105,10 +110,10 @@ describe.skip("Testing the backend sets API", () => {
         // Get all the public sets and all the cards of a user
         test("Get all the public sets when logged in as a user", async () => {
             // Login
-            const user = await api.post("/api/user/login").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/login").send({username: "name", password: "password"}).expect(200);
 
             // Get all the public sets as that user
-            const res = await api.get("/api/set")
+            const res = await request(app).get("/api/set")
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             expect(res.body.length).toBe(3);
@@ -117,7 +122,7 @@ describe.skip("Testing the backend sets API", () => {
         // Get all the public sets when logged in as an invalid user
         test("Get all the public sets when logged in as an invalid user", async () => {
             // Get all the public sets as that user
-            const res = await api.get("/api/set")
+            const res = await request(app).get("/api/set")
                 .set("Authorization", "bearer fakeToken").expect(200);
 
             expect(res.body.length).toBe(2);
@@ -134,7 +139,7 @@ describe.skip("Testing the backend sets API", () => {
         test("Get a public set while not logged in", async () => {
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             
-            const res = await api.get("/api/set/" + set.id).expect(200);
+            const res = await request(app).get("/api/set/" + set.id).expect(200);
 
             expect(res.body).toEqual(set);
         });
@@ -142,10 +147,10 @@ describe.skip("Testing the backend sets API", () => {
         // Test getting a private set when logged in
         test("Get a private set while logged in", async () => {
             // Login and create the set
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: false, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             
-            const res = await api.get("/api/set/" + set.id)
+            const res = await request(app).get("/api/set/" + set.id)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             expect(res.body).toEqual(set);
@@ -154,10 +159,10 @@ describe.skip("Testing the backend sets API", () => {
         // Test getting a private set when logged in as a different user
         test("Get a private set while logged in as another user", async () => {
             // Login and create the set
-            const user = await api.post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: false, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             
-            const res = await api.get("/api/set/" + set.id)
+            const res = await request(app).get("/api/set/" + set.id)
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
             expect(res.body).toEqual({});
@@ -167,21 +172,21 @@ describe.skip("Testing the backend sets API", () => {
         test("Get a private set while not logged in", async () => {
             const set = await createSet({title:"title", description:"desc", public: false, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             
-            const res = await api.get("/api/set/" + set.id).expect(401);
+            const res = await request(app).get("/api/set/" + set.id).expect(401);
 
             expect(res.body).toEqual({});
         });
 
         // Test getting a set that does not exist
         test("Get a set that does not exist", async () => {
-            const res = await api.get("/api/set/fakeSet").expect(404);
+            const res = await request(app).get("/api/set/fakeSet").expect(404);
             
             expect(res.body).toEqual({});
         });
 
         // Test getting a set with an id that does not exist but has length 24
         test("Get set with fake id with length 24", async () => {
-            const res = await api.get("/api/set/66b491a970c9eac4c3a1c17b").expect(404);
+            const res = await request(app).get("/api/set/66b491a970c9eac4c3a1c17b").expect(404);
             
             expect(res.body).toEqual({});
         });
@@ -194,10 +199,10 @@ describe.skip("Testing the backend sets API", () => {
         // Test creating a valid set when logged in
         test("Create a valid set while logged in", async () => {
             // Login and declare the set
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
 
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the set was created successfully
@@ -213,7 +218,7 @@ describe.skip("Testing the backend sets API", () => {
             // Declare the set
             const set = {title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
 
-            const res = await api.post("/api/set").send(set).expect(401);
+            const res = await request(app).post("/api/set").send(set).expect(401);
 
             // Check the body is empty
             expect(res.body).toEqual({});
@@ -221,10 +226,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a set without a description
         test("Create a set without a description", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
 
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the set was created successfully
@@ -237,10 +242,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a set without a visibility setting
         test("Create a set without a visibility setting", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", description:"desc", cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
 
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the set was created successfully
@@ -253,12 +258,12 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a duplicate set
         test("Create a duplicate set", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
             
             // Create two of the set
             await createSet(set, "name");
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check the second set was created successfully
@@ -271,10 +276,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a set without a title
         test("Create a set without a title", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = { description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
             
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the set was not created
@@ -283,10 +288,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a set without any cards
         test("Create a set without any cards", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", description:"desc", public: true, cards: []};
             
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the set was not created
@@ -295,10 +300,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating a set with undefined cards
         test("Create a set with undefined cards", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = {title:"title", description:"desc", public: true};
             
-            const res = await api.post("/api/set").send(set)
+            const res = await request(app).post("/api/set").send(set)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the set was not created
@@ -307,9 +312,9 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test creating an undefined set
         test("Create an undefined set", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             
-            const res = await api.post("/api/set").send(undefined)
+            const res = await request(app).post("/api/set").send(undefined)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check the set was not created
@@ -323,11 +328,11 @@ describe.skip("Testing the backend sets API", () => {
 
         // Delete a set with a valid id while logged in
         test("Delete a set with a valid id while logged in", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
-            await api.delete("/api/set/" + set.id)
+            await request(app).delete("/api/set/" + set.id)
                 .set("Authorization", "bearer " + user.body.token).expect(204);
 
             expect(await getSet(set.id)).not.toBeDefined();
@@ -335,11 +340,11 @@ describe.skip("Testing the backend sets API", () => {
 
         // Delete a valid set while not logged in
         test("Delete a set with a valid id while logged in", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
-            await api.delete("/api/set/" + set.id).expect(401);
+            await request(app).delete("/api/set/" + set.id).expect(401);
 
             // Check the set was not deleted 
             expect(await getSet(set.id)).toEqual(set);
@@ -347,11 +352,11 @@ describe.skip("Testing the backend sets API", () => {
 
         // Delete a valid set while logged in as another user
         test("Delete a set with a valid id while logged in", async () => {
-            const user = await api.post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
-            await api.delete("/api/set/" + set.id)
+            await request(app).delete("/api/set/" + set.id)
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
             // Check the set was not deleted
@@ -360,11 +365,11 @@ describe.skip("Testing the backend sets API", () => {
 
         // Delete a set with an invalid id while logged in
         test("Delete a set with an invalid id while logged in", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             // Assert the set does not exist
             expect(await getSet("fakeID")).not.toBeDefined();
 
-            await api.delete("/api/set/fakeID")
+            await request(app).delete("/api/set/fakeID")
                 .set("Authorization", "bearer " + user.body.token).expect(204);
 
             // Assert the set does not exist
@@ -373,11 +378,11 @@ describe.skip("Testing the backend sets API", () => {
 
         // Delete a set with an invalid id of length 24
         test("Delete a set with an invalid id of length 24", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             // Assert the set does not exist
             expect(await getSet("66b491a970c9eac4c3a1c17b")).not.toBeDefined();
 
-            await api.delete("/api/set/66b491a970c9eac4c3a1c17b")
+            await request(app).delete("/api/set/66b491a970c9eac4c3a1c17b")
                 .set("Authorization", "bearer " + user.body.token).expect(204);
 
             // Asser the set does not exist
@@ -406,12 +411,12 @@ describe.skip("Testing the backend sets API", () => {
         // Test valid updates to sets
         test.each(VALID_UPDATES)("Update a set with valid details while logged in", async (update) => {
             // Create a set to update and the user that created the set
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
             // Update the set
-            const res = await api.put("/api/set/" + set.id).send(update)
+            const res = await request(app).put("/api/set/" + set.id).send(update)
                 .set("Authorization", "bearer " + user.body.token).expect(200);
 
             // Check that the update happened
@@ -425,12 +430,12 @@ describe.skip("Testing the backend sets API", () => {
         // Test invalid updates to sets
         test.each(INVALID_UPDATES)("Update a set with invalid details while logged in", async (update) => {
             // Create a set to update and the user that created the set
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
             // Update the set
-            const res = await api.put("/api/set/" + set.id).send(update)
+            const res = await request(app).put("/api/set/" + set.id).send(update)
                 .set("Authorization", "bearer " + user.body.token).expect(400);
 
             // Check that the update did not occur
@@ -441,12 +446,12 @@ describe.skip("Testing the backend sets API", () => {
         // Test updating a set while not logged in
         test("Update a set while not logged in", async () => {
             // Create a set to update and the user that created the set
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
             // Update the set
-            const res = await api.put("/api/set/" + set.id).send({title:"title2", description:"desc2", public: true, cards: [{term: "term2", definition: "def2"}]})
+            const res = await request(app).put("/api/set/" + set.id).send({title:"title2", description:"desc2", public: true, cards: [{term: "term2", definition: "def2"}]})
                 .expect(401);
 
             // Check that the update did not occur
@@ -457,12 +462,12 @@ describe.skip("Testing the backend sets API", () => {
         // Test updating a set while logged in as a different user
         test("Update a set while logged in as a different user", async () => {
             // Create a set to update and the user that created the set
-            const user = await api.post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name2", password: "password"}).expect(200);
             const set = await createSet({title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]}, "name");
             expect(set).toBeDefined();
 
             // Update the set
-            const res = await api.put("/api/set/" + set.id).send({title:"title2", description:"desc2", public: true, cards: [{term: "term2", definition: "def2"}]})
+            const res = await request(app).put("/api/set/" + set.id).send({title:"title2", description:"desc2", public: true, cards: [{term: "term2", definition: "def2"}]})
                 .set("Authorization", "bearer " + user.body.token).expect(403);
 
             // Check that the update did not occur
@@ -472,10 +477,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test updating a set that does not exist
         test("Update a set that does not exist", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const update = {title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
             // Update the set
-            const res = await api.put("/api/set/fakeID").send(update)
+            const res = await request(app).put("/api/set/fakeID").send(update)
                 .set("Authorization", "bearer " + user.body.token).expect(404);
 
             // Check that the result is undefined
@@ -484,10 +489,10 @@ describe.skip("Testing the backend sets API", () => {
 
         // Test updaing a set that does not exist with an id of length 24
         test("Update a set that does not exist with an id of length 24", async () => {
-            const user = await api.post("/api/user/register").send({username: "name", password: "password"}).expect(200);
+            const user = await request(app).post("/api/user/register").send({username: "name", password: "password"}).expect(200);
             const update = {title:"title", description:"desc", public: true, cards: [{term: {file: false, content: "term"}, definition: {file: false, content: "def"}}]};
             // Update the set
-            const res = await api.put("/api/set/66b491a970c9eac4c3a1c17b").send(update)
+            const res = await request(app).put("/api/set/66b491a970c9eac4c3a1c17b").send(update)
                 .set("Authorization", "bearer " + user.body.token).expect(404);
 
             // Check that the result is undefined
