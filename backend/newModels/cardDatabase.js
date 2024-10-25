@@ -1,26 +1,57 @@
 const config = require("../utils/config");
-const { openMongoose, getHexID } = require("../utils/mongoose");
+const { openMongoose, getHexID, asyncOpenMongoose } = require("../utils/mongoose");
 
-// Create a schema for user objects
-const cardSchema = new openMongoose().Schema({
-    term: {file: Boolean, content: String},
-    definition: {file: Boolean, content: String},
-    set: String
-}, { id: false });
+let Card = undefined;
 
-// Configure how the toObject function acts on user objects
-cardSchema.options.toObject = {
-    transform: (doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-    }
-};
+// // Create a schema for user objects
+// const cardSchema = new openMongoose().Schema({
+//     term: {file: Boolean, content: String},
+//     definition: {file: Boolean, content: String},
+//     set: String
+// }, { id: false });
 
-// Create a user object model
-const Card = openMongoose().model("Card", cardSchema, "Cards");
+// // Configure how the toObject function acts on user objects
+// cardSchema.options.toObject = {
+//     transform: (doc, ret) => {
+//         ret.id = ret._id.toString();
+//         delete ret._id;
+//         delete ret.__v;
+//     }
+// };
+
+// // Create a user object model
+// Card = openMongoose().model("Card", cardSchema, "Cards");
+
+// Try using asyncOpenMongoose
+const setUpCard = async () => {
+    
+    // if Cards has already been created then do nothing
+    if(Card) return;
+    
+    const mongoose = await asyncOpenMongoose();
+
+    // Create a schema for user objects
+    const cardSchema = new mongoose.Schema({
+        term: {file: Boolean, content: String},
+        definition: {file: Boolean, content: String},
+        set: String
+    }, { id: false });
+
+    // Configure how the toObject function acts on user objects
+    cardSchema.options.toObject = {
+        transform: (doc, ret) => {
+            ret.id = ret._id.toString();
+            delete ret._id;
+            delete ret.__v;
+        }
+    };
+
+    // Create a card object model
+    Card = mongoose.model("Card", cardSchema, "Cards");
+}
 
 async function createCard(card, setID) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
 
     // Check that the card is in the correct format
     if (card && card.term && card.definition && card.term.content && card.definition.content && setID) {
@@ -41,6 +72,8 @@ async function createCard(card, setID) {
 }
 
 async function createCards(cards, setID) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     const createdCards = [];
     if(cards && cards.length > 0 && setID) {
         // Create all the cards in the set
@@ -53,11 +86,15 @@ async function createCards(cards, setID) {
 }
 
 async function getCards(setID) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     const cards = (await Card.find({ set: setID })).map(card => card.toObject());
     return cards;
 }
 
 async function getImageCard(fileID) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     console.log(fileID);
     const card = await Card.findOne({$or: [{"term.file": true, "term.content": fileID}, {"definition.file": true, "definition.content": fileID}]});
     
@@ -66,10 +103,14 @@ async function getImageCard(fileID) {
 }
 
 async function deleteCards(setID) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     await Card.deleteMany({set: setID});
 }
 
 async function getCard(id) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     if (id && id.length === 24) {
         const cards = await Card.find({ _id: getHexID(id) });
         return cards.map(card => card.toObject())[0];
@@ -78,10 +119,13 @@ async function getCard(id) {
 }
 
 async function deleteCard(id) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     if (id && id.length === 24) await Card.findOneAndDelete({ _id: getHexID(id) });
 }
 
 async function updateCard(id, newCard) {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
 
     // Make sure the id is the correct length
     if (id && id.length === 24 && newCard && newCard.term && newCard.definition) {
@@ -102,6 +146,8 @@ async function updateCard(id, newCard) {
 
 // Function that drops the whole database for use during testing only
 async function deleteAllCards() {
+    if(!Card) await setUpCard(); // Make sure the Card schema is defined
+
     // Only delete all if running in test mode
     if(config.MODE === "test") await Card.deleteMany({});
 }

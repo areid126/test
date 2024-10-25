@@ -1,9 +1,8 @@
 // Taken from individual project code (Abbey)
 const config = require("../utils/config");
-const { openMongoose, getHexID } = require("../utils/mongoose");
+const { openMongoose, getHexID, asyncOpenMongoose } = require("../utils/mongoose");
 const { getImageCard } = require("./cardDatabase");
 const { getSet } = require("./setDatabase");
-
 
 // Connection string
 let configured = false;
@@ -11,18 +10,18 @@ let gfs;
 
 // Configure the gridfs file connection for serving up files
 async function setup() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
 
         // If it has already been configured return it
         if (configured) return resolve(gfs);
 
         // Otherwise connect to the database
         else {
-            const conn = openMongoose().createConnection(url);
-            conn.once("open", () => {
+            const conn = await asyncOpenMongoose().createConnection(url);
+            conn.once("open", async () => {
 
                 // Create an uploads bucket
-                gfs = new openMongoose().mongo.GridFSBucket(conn.db, {
+                gfs = new (await asyncOpenMongoose()).mongo.GridFSBucket(conn.db, {
                     bucketName: "images"
                 });
 

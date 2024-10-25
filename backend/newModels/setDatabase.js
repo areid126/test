@@ -1,29 +1,38 @@
 const config = require("../utils/config");
-const { openMongoose, getHexID } = require("../utils/mongoose");
+const { openMongoose, getHexID, asyncOpenMongoose } = require("../utils/mongoose");
 const { createCards, deleteCards, getCards } = require("./cardDatabase");
 
+let Set = undefined;
 
-// Create a schema for user objects
-const setSchema = new openMongoose().Schema({
-    title: String,
-    description: String,
-    user: String,
-    public: Boolean
-}, { id: false});
+async function setUpSet() {
 
-// Configure how the toObject function acts on set objects
-setSchema.options.toObject = {
-    transform: (doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-    }
-};
+    if(Set) return;
 
-// Create a user object model
-const Set = openMongoose().model("Set", setSchema, "Sets");
+    const mongoose = await asyncOpenMongoose();
+
+    // Create a schema for user objects
+    const setSchema = new mongoose.Schema({
+        title: String,
+        description: String,
+        user: String,
+        public: Boolean
+    }, { id: false});
+
+    // Configure how the toObject function acts on set objects
+    setSchema.options.toObject = {
+        transform: (doc, ret) => {
+            ret.id = ret._id.toString();
+            delete ret._id;
+            delete ret.__v;
+        }
+    };
+
+    // Create a user object model
+    Set = mongoose.model("Set", setSchema, "Sets");
+}
 
 async function createSet(set, username) {
+    if(!Set) await setUpSet();
 
     // Check that the set is in the correct format
     if (set && set.title && set.cards && set.cards.length > 0 && username) {
@@ -51,6 +60,8 @@ async function createSet(set, username) {
 }
 
 async function getSet(id) {
+    if(!Set) await setUpSet();
+
     // Return the empty set if the id is invalid
     if (id && id.length === 24) {
         const sets = (await Set.find({ _id: getHexID(id) })).map(set => set.toObject());
@@ -65,6 +76,8 @@ async function getSet(id) {
 // public to indicate whether only the public cards of a specific user should be gotten. Adding the title field will only get you sets with similar titles
 // that match the other provided criteria
 async function getSets(username=undefined, all=false, visible=false, title=undefined) {
+    if(!Set) await setUpSet();
+
     let filters = {};
     
     // Get all the cards including the private cards of the user
@@ -85,6 +98,8 @@ async function getSets(username=undefined, all=false, visible=false, title=undef
 }
 
 async function deleteSet(id) {
+    if(!Set) await setUpSet();
+
     // Delete the Set
     if (id && id.length === 24) {
         await Set.findOneAndDelete({ _id: getHexID(id) });
@@ -95,11 +110,15 @@ async function deleteSet(id) {
 }
 
 async function deleteSets(username) {
+    if(!Set) await setUpSet();
+
     // Delete all the sets all at once
     await Set.deleteMany({user: username});
 }
 
 async function updateSet(id, newSet) {
+    if(!Set) await setUpSet();
+
 
     // Make sure the id is the correct length
     if (id && id.length === 24 && newSet && newSet.title && newSet.cards && newSet.cards.length > 0) {
@@ -132,11 +151,15 @@ async function updateSet(id, newSet) {
 
 // Function specifically for updating the user associated with a set of cards
 async function changeCreator(oldUser, newUser) {
+    if(!Set) await setUpSet();
+
     await Set.updateMany({user: oldUser}, { $set: {user: newUser}});
 }
 
 // Create a function that adds an array of a sets cards to the set
 async function addCards(set) {
+    if(!Set) await setUpSet();
+
     if(set) {
         const cards = await getCards(set.id);
         set.cards = cards;
@@ -146,13 +169,15 @@ async function addCards(set) {
 
 // Function that drops the whole database for use during testing only
 async function deleteAllSets() {
+    if(!Set) await setUpSet();
+
     // Only delete all if running in test mode
     if(config.MODE === "test") await Set.deleteMany({});
 }
 
 // Function to close the connection
 async function closeSetConnection() {
-    if(config.MODE === "test") await openMongoose().disconnect();
+    if(config.MODE === "test") (await asyncOpenMongoose()).disconnect();
 }
 
 // Export functions for use in other files
